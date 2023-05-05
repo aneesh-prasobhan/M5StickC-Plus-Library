@@ -34,7 +34,9 @@ int MPU6886::Init(void) {
     Wire1.begin(21, 22);
 
     I2C_Read_NBytes(MPU6886_ADDRESS, MPU6886_WHOAMI, 1, tempdata);
-    if (tempdata[0] != 0x19) return -1;
+  Serial.printf("%02X\r\n",tempdata[0]);
+  if(tempdata[0] != 0x19)
+    return -1;
     delay(1);
 
     regdata = 0x00;
@@ -135,6 +137,32 @@ void MPU6886::getAhrsData(float* pitch, float* roll, float* yaw) {
                         gyroZ * DEG_TO_RAD, accX, accY, accZ, pitch, roll, yaw);
 }
 
+void MPU6886::getAttitude(double *pitch, double *roll)
+{
+    float accX = 0;
+    float accY = 0;
+    float accZ = 0;
+
+    float gyroX = 0;
+    float gyroY = 0;
+    float gyroZ = 0;
+
+    getGyroData(&gyroX, &gyroY, &gyroZ);
+    getAccelData(&accX, &accY, &accZ);
+
+    if ((accX < 1) && (accX > -1))
+    {
+        *pitch = asin(-accX) * 57.295;
+    }
+    if (accZ != 0)
+    {
+        *roll = atan(accY / accZ) * 57.295;
+    }
+
+    ( *pitch ) = _alpha * ( *pitch ) + (1 - _alpha) * _last_theta;
+    ( *roll ) = _alpha * ( *roll ) + (1 - _alpha) * _last_phi;
+}
+
 void MPU6886::getGres() {
     switch (Gyscale) {
             // Possible gyro scales (and their register bit settings) are:
@@ -195,6 +223,41 @@ void MPU6886::SetAccelFsr(Ascale scale) {
     getAres();
 }
 
+void MPU6886::CalibrateGyro(int seconds)
+{
+  int startTime = millis();
+  int sampleCount = 0;
+
+  //We use 100hz for calibration
+
+  //Clear previous calibration data;
+  _cx = 0;
+  _cy = 0;
+  _cz = 0;
+
+  float gyx = 0,gyy = 0,gyz = 0;
+  //Collect Data
+  while (millis() < startTime + (1000 * seconds)){
+      float gx,gy,gz;
+      getGyroData(&gx,&gy,&gz);
+      gyx += gx;
+      gyy += gy;
+      gyz += gz;
+      sampleCount++;
+      // Serial.printf("%.2f,%.2f,%.2f o/s \r\n", gx, gy, gz);
+      delay(10);
+  }
+  // Serial.print(sampleCount);
+  // Serial.println(" Samples Taken");
+  // Serial.printf("%.2f,%.2f,%.2f o/s \r\n", gyx, gyy, gyz);
+  _cx = gyx / sampleCount;
+  _cy = gyy / sampleCount;
+  _cz = gyz / sampleCount;
+  // Serial.printf("%.2f,%.2f,%.2f o/s \r\n", _cx, _cy, _cz);
+}
+
+
+
 void MPU6886::getAccelData(float* ax, float* ay, float* az) {
     int16_t accX = 0;
     int16_t accY = 0;
@@ -210,12 +273,20 @@ void MPU6886::getGyroData(float* gx, float* gy, float* gz) {
     int16_t gyroX = 0;
     int16_t gyroY = 0;
     int16_t gyroZ = 0;
-    getGyroAdc(&gyroX, &gyroY, &gyroZ);
+  getGyroAdc(&gyroX,&gyroY,&gyroZ);
 
-    *gx = (float)gyroX * gRes;
-    *gy = (float)gyroY * gRes;
-    *gz = (float)gyroZ * gRes;
+  *gx = ((float)gyroX * gRes) - _cx;
+  *gy = ((float)gyroY * gRes) - _cy;
+  *gz = ((float)gyroZ * gRes) - _cz;
 }
+
+void MPU6886::getCalibData(float* cx, float* cy, float* cz){
+
+  *cx = _cx;
+  *cy = _cy;
+  *cz = _cz;
+}
+
 
 void MPU6886::getTempData(float* t) {
     int16_t temp = 0;

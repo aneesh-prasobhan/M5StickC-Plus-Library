@@ -86,6 +86,9 @@ class MPU6886 {
     void SetGyroFsr(Gscale scale);
     void SetAccelFsr(Ascale scale);
     void getAhrsData(float* pitch, float* roll, float* yaw);
+    void getCalibData(float* cx, float* cy, float* cz);
+    void CalibrateGyro(int seconds);
+    void getAttitude(double *pitch, double *roll);
 
     //	New public functions of MPU6886 to support FIFO buffered sensor data
     // output
@@ -100,6 +103,11 @@ class MPU6886 {
     float aRes, gRes;
 
    private:
+        float _last_theta = 0;
+        float _last_phi = 0;
+        float _alpha = 0.5;
+        float _cx = 0, _cy = 0, _cz = 0; 
+
    private:
     void I2C_Read_NBytes(uint8_t driver_Addr, uint8_t start_Addr,
                          uint8_t number_Bytes, uint8_t* read_Buffer);
