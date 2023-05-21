@@ -21,7 +21,7 @@
 //---------------------------------------------------------------------------------------------------
 // Definitions
 
-#define sampleFreq 95.0f          // sample frequency in Hz 
+#define sampleFreq 90.0f          // sample frequency in Hz 
                                    // If you increase this, the graphics slows down, decrease- speeds up.
 #define twoKpDef   (2.0f * 1.0f)  // 2 * proportional gain
 #define twoKiDef   (2.0f * 0.0f)  // 2 * integral gain
